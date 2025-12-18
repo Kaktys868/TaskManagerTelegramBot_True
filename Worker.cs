@@ -1,6 +1,7 @@
 using System.Reflection.Metadata.Ecma335;
 using TaskManagerTelegramBot_True.Classes;
 using Telegram.Bot;
+using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 
 namespace TaskManagerTelegramBot_True
@@ -69,6 +70,47 @@ namespace TaskManagerTelegramBot_True
             List<InlineKeyboardButton> inlineKeyboards = new List<InlineKeyboardButton>();
             inlineKeyboards.Add(new InlineKeyboardButton("Удалить") { CallbackData = Message });
             return new InlineKeyboardMarkup(inlineKeyboards);
+        }
+        public async void SendMessage(long chatId, int typeMessage)
+        {
+            if (typeMessage != 3)
+            {
+                await TelegramBotClient.SendMessage(
+                    chatId,
+                    Messages[typeMessage],
+                    parseMode: ParseMode.Html,
+                    replyMarkup: GetButtons());
+            }
+            else if (typeMessage == 3)
+            {
+                await TelegramBotClient.SendMessage(
+                    chatId,
+                    $"Указанное вами время и дата не могут быть установлены, " +
+                    $"потому что сейчас уже: {DateTime.Now.ToString("HH:mm dd.MM.yyyy")}");
+            }
+        }
+        public async void Command(long chatId, string command)
+        {
+            if (command.ToLower() == "/start") SendMessage(chatId, 0);
+            else if (command.ToLower() == "/create_task") SendMessage(chatId, 1);
+            else if (command.ToLower() == "/list_tasks")
+            {
+                Users User = Users.Find(x => x.IdUser == chatId);
+                if (User == null) SendMessage(chatId, 4);
+                else if (User.Events.Count == 0) SendMessage(chatId, 4);
+                else
+                {
+                    foreach (Events Event in User.Events)
+                    {
+                        await TelegramBotClient.SendMessage(
+                            chatId,
+                            $"Уведомить пользователя: {Event.Time.ToString("HH:mm dd.MM.yyyy")}" +
+                            $"\nСообщение: {Event.Message}",
+                            replyMarkup: DeleteEvent(Event.Message)
+                        );
+                    }
+                }
+            }
         }
     }
 }
