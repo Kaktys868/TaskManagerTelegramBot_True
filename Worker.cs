@@ -9,7 +9,7 @@ namespace TaskManagerTelegramBot_True
 {
     public class Worker : BackgroundService
     {
-        readonly string Token = "полученный телеграм токен";
+        readonly string Token = "8448214301:AAF0Fcz1NiXXbnCAUrlpK3itwDoMs3gFR80";
         TelegramBotClient TelegramBotClient;
         List<Users> Users = new List<Users>();
         Timer Timer;
@@ -28,7 +28,7 @@ namespace TaskManagerTelegramBot_True
             "\nУкажите дату и время напоминания в следующем формате:" +
             "\n<i><b>12:51 26.04.2025</b></i>" +
             "\nНапомни о том что я хотел сходить в магазин.",
-            
+
             "Задачи пользователя не найдены.",
 
             "Событие удалено.",
@@ -46,17 +46,17 @@ namespace TaskManagerTelegramBot_True
         {
             TelegramBotClient = new TelegramBotClient(Token);
             TelegramBotClient.StartReceiving(
-                HandleUpdateAsync, 
+                HandleUpdateAsync,
                 HandleErrorAsync,
                 null,
-                new CancellationTokenSource().Token 
+                new CancellationTokenSource().Token
                 );
             TimerCallback TimerCallback = new TimerCallback(Tick);
             Timer = new Timer(TimerCallback, 0, 0, 60 * 1000);
         }
         public bool CheckFormatDateTime(string value, out DateTime time)
         {
-            return DateTime.TryParse(value,out time);
+            return DateTime.TryParse(value, out time);
         }
         private static ReplyKeyboardMarkup GetButtons()
         {
@@ -75,6 +75,12 @@ namespace TaskManagerTelegramBot_True
         }
         public async void SendMessage(long chatId, int typeMessage)
         {
+            if (typeMessage < 0 || typeMessage >= Messages.Count)
+            {
+                Console.WriteLine($"Ошибка: недопустимый индекс сообщения {typeMessage}. Допустимый диапазон: 0-{Messages.Count - 1}");
+                return;
+            }
+
             if (typeMessage != 3)
             {
                 await TelegramBotClient.SendMessage(
@@ -88,7 +94,8 @@ namespace TaskManagerTelegramBot_True
                 await TelegramBotClient.SendMessage(
                     chatId,
                     $"Указанное вами время и дата не могут быть установлены, " +
-                    $"потому что сейчас уже: {DateTime.Now.ToString("HH:mm dd.MM.yyyy")}");
+                    $"потому что сейчас уже: {DateTime.Now.ToString("HH:mm dd.MM.yyyy")}",
+                    replyMarkup: GetButtons());
             }
         }
         public async void Command(long chatId, string command)
@@ -98,8 +105,8 @@ namespace TaskManagerTelegramBot_True
             else if (command.ToLower() == "/list_tasks")
             {
                 Users User = Users.Find(x => x.IdUser == chatId);
-                if (User == null) SendMessage(chatId, 4);
-                else if (User.Events.Count == 0) SendMessage(chatId, 4);
+                if (User == null) SendMessage(chatId, 3);
+                else if (User.Events.Count == 0) SendMessage(chatId, 3);
                 else
                 {
                     foreach (Events Event in User.Events)
@@ -124,12 +131,30 @@ namespace TaskManagerTelegramBot_True
             else if (message.Text.Equals("Удалить все задачи"))
             {
                 Users User = Users.Find(x => x.IdUser == message.Chat.Id);
-                if (User == null) SendMessage(message.Chat.Id, 4);
-                else if (User.Events.Count == 0) SendMessage(User.IdUser, 4);
+                if (User == null) SendMessage(message.Chat.Id, 3);
+                else if (User.Events.Count == 0) SendMessage(User.IdUser, 3);
                 else
                 {
                     User.Events = new List<Events>();
-                    SendMessage(User.IdUser, 6);
+                    SendMessage(User.IdUser, 5);
+                }
+            }
+            else if (message.Text.Equals("Показать все задачи"))
+            {
+                Users User = Users.Find(x => x.IdUser == message.Chat.Id);
+                if (User == null) SendMessage(message.Chat.Id, 3);
+                else if (User.Events.Count == 0) SendMessage(message.Chat.Id, 3);
+                else
+                {
+                    foreach (Events Event in User.Events)
+                    {
+                        TelegramBotClient.SendMessage(
+                            message.Chat.Id,
+                            $"Уведомить пользователя: {Event.Time.ToString("HH:mm dd.MM.yyyy")}" +
+                            $"\nСообщение: {Event.Message}",
+                            replyMarkup: DeleteEvent(Event.Message)
+                        );
+                    }
                 }
             }
             else
@@ -173,7 +198,7 @@ namespace TaskManagerTelegramBot_True
                 Users User = Users.Find(x => x.IdUser == query.Message.Chat.Id);
                 Events Event = User.Events.Find(x => x.Message == query.Data);
                 User.Events.Remove(Event);
-                SendMessage(query.Message.Chat.Id, 5);
+                SendMessage(query.Message.Chat.Id, 4);
             }
         }
         private async Task HandleErrorAsync(
@@ -189,7 +214,7 @@ namespace TaskManagerTelegramBot_True
 
             foreach (Users User in Users)
             {
-                for (int i = 0; i < User.Events.Count; i++)
+                for (int i = User.Events.Count - 1; i >= 0; i--)
                 {
                     if (User.Events[i].Time.ToString("HH:mm dd.MM.yyyy") != TimeNow) continue;
 
@@ -197,8 +222,8 @@ namespace TaskManagerTelegramBot_True
                         User.IdUser,
                         "Напоминание: " + User.Events[i].Message
                         );
-                    
-                    User.Events.Remove(User.Events[i]);
+
+                    User.Events.RemoveAt(i);
                 }
             }
         }
