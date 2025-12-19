@@ -1,4 +1,4 @@
-using System.Reflection.Metadata.Ecma335;
+п»їusing System.Reflection.Metadata.Ecma335;
 using TaskManagerTelegramBot_True.Classes;
 using Telegram.Bot;
 using Telegram.Bot.Types;
@@ -12,28 +12,29 @@ namespace TaskManagerTelegramBot_True
         readonly string Token = "8448214301:AAF0Fcz1NiXXbnCAUrlpK3itwDoMs3gFR80";
         TelegramBotClient TelegramBotClient;
         List<Users> Users = new List<Users>();
+        static List<Events> Events = new List<Events>();
         Timer Timer;
         List<string> Messages = new List<string>()
         {
-            "Здравствуйте!" +
-            "\nРад приветствовать вас в Telegram-боте «Напоминатор»!" +
-            "\nНаш бот создан для того, чтобы напоминать вам о важных событиях и мероприятиях. С ним вы точно не пропустите ничего важного!" +
-            "\nНе забудьте добавить бота в список своих контактов и настроить уведомления. Тогда вы всегда будете в курсе событий!",
+            "Р—РґСЂР°РІСЃС‚РІСѓР№С‚Рµ!" +
+            "\nР Р°Рґ РїСЂРёРІРµС‚СЃС‚РІРѕРІР°С‚СЊ РІР°СЃ РІ Telegram-Р±РѕС‚Рµ В«РќР°РїРѕРјРёРЅР°С‚РѕСЂВ»!" +
+            "\nРќР°С€ Р±РѕС‚ СЃРѕР·РґР°РЅ РґР»СЏ С‚РѕРіРѕ, С‡С‚РѕР±С‹ РЅР°РїРѕРјРёРЅР°С‚СЊ РІР°Рј Рѕ РІР°Р¶РЅС‹С… СЃРѕР±С‹С‚РёСЏС… Рё РјРµСЂРѕРїСЂРёСЏС‚РёСЏС…. РЎ РЅРёРј РІС‹ С‚РѕС‡РЅРѕ РЅРµ РїСЂРѕРїСѓСЃС‚РёС‚Рµ РЅРёС‡РµРіРѕ РІР°Р¶РЅРѕРіРѕ!" +
+            "\nРќРµ Р·Р°Р±СѓРґСЊС‚Рµ РґРѕР±Р°РІРёС‚СЊ Р±РѕС‚Р° РІ СЃРїРёСЃРѕРє СЃРІРѕРёС… РєРѕРЅС‚Р°РєС‚РѕРІ Рё РЅР°СЃС‚СЂРѕРёС‚СЊ СѓРІРµРґРѕРјР»РµРЅРёСЏ. РўРѕРіРґР° РІС‹ РІСЃРµРіРґР° Р±СѓРґРµС‚Рµ РІ РєСѓСЂСЃРµ СЃРѕР±С‹С‚РёР№!",
 
-            "Укажите дату и время напоминания в следующем формате:" +
+            "РЈРєР°Р¶РёС‚Рµ РґР°С‚Сѓ Рё РІСЂРµРјСЏ РЅР°РїРѕРјРёРЅР°РЅРёСЏ РІ СЃР»РµРґСѓСЋС‰РµРј С„РѕСЂРјР°С‚Рµ:" +
             "\n<i><b>12:51 26.04.2025</b></i>" +
-            "\nНапомни о том что я хотел сходить в магазин.",
+            "\nРќР°РїРѕРјРЅРё Рѕ С‚РѕРј С‡С‚Рѕ СЏ С…РѕС‚РµР» СЃС…РѕРґРёС‚СЊ РІ РјР°РіР°Р·РёРЅ.",
 
-            "Кажется, что-то не получилось." +
-            "\nУкажите дату и время напоминания в следующем формате:" +
+            "РљР°Р¶РµС‚СЃСЏ, С‡С‚Рѕ-С‚Рѕ РЅРµ РїРѕР»СѓС‡РёР»РѕСЃСЊ." +
+            "\nРЈРєР°Р¶РёС‚Рµ РґР°С‚Сѓ Рё РІСЂРµРјСЏ РЅР°РїРѕРјРёРЅР°РЅРёСЏ РІ СЃР»РµРґСѓСЋС‰РµРј С„РѕСЂРјР°С‚Рµ:" +
             "\n<i><b>12:51 26.04.2025</b></i>" +
-            "\nНапомни о том что я хотел сходить в магазин.",
+            "\nРќР°РїРѕРјРЅРё Рѕ С‚РѕРј С‡С‚Рѕ СЏ С…РѕС‚РµР» СЃС…РѕРґРёС‚СЊ РІ РјР°РіР°Р·РёРЅ.",
 
-            "Задачи пользователя не найдены.",
+            "Р—Р°РґР°С‡Рё РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ РЅРµ РЅР°Р№РґРµРЅС‹.",
 
-            "Событие удалено.",
+            "РЎРѕР±С‹С‚РёРµ СѓРґР°Р»РµРЅРѕ.",
 
-            "Все события удалены."
+            "Р’СЃРµ СЃРѕР±С‹С‚РёСЏ СѓРґР°Р»РµРЅС‹."
         };
         private readonly ILogger<Worker> _logger;
 
@@ -61,23 +62,23 @@ namespace TaskManagerTelegramBot_True
         private static ReplyKeyboardMarkup GetButtons()
         {
             List<KeyboardButton> keyboardButtons = new List<KeyboardButton>();
-            keyboardButtons.Add(new KeyboardButton("Удалить все задачи"));
+            keyboardButtons.Add(new KeyboardButton("РЈРґР°Р»РёС‚СЊ РІСЃРµ Р·Р°РґР°С‡Рё"));
             return new ReplyKeyboardMarkup
             {
                 Keyboard = new List<List<KeyboardButton>> { keyboardButtons }
             };
         }
-        public static InlineKeyboardMarkup DeleteEvent(string Message)
+        public static InlineKeyboardMarkup DeleteEvent(int IdEvent)
         {
             List<InlineKeyboardButton> inlineKeyboards = new List<InlineKeyboardButton>();
-            inlineKeyboards.Add(new InlineKeyboardButton("Удалить") { CallbackData = Message });
+            inlineKeyboards.Add(new InlineKeyboardButton("РЈРґР°Р»РёС‚СЊ") { CallbackData = Events.Find(x=>x.Id==IdEvent).Message});
             return new InlineKeyboardMarkup(inlineKeyboards);
         }
         public async void SendMessage(long chatId, int typeMessage)
         {
             if (typeMessage < 0 || typeMessage >= Messages.Count)
             {
-                Console.WriteLine($"Ошибка: недопустимый индекс сообщения {typeMessage}. Допустимый диапазон: 0-{Messages.Count - 1}");
+                Console.WriteLine($"РћС€РёР±РєР°: РЅРµРґРѕРїСѓСЃС‚РёРјС‹Р№ РёРЅРґРµРєСЃ СЃРѕРѕР±С‰РµРЅРёСЏ {typeMessage}. Р”РѕРїСѓСЃС‚РёРјС‹Р№ РґРёР°РїР°Р·РѕРЅ: 0-{Messages.Count - 1}");
                 return;
             }
 
@@ -93,15 +94,18 @@ namespace TaskManagerTelegramBot_True
             {
                 await TelegramBotClient.SendMessage(
                     chatId,
-                    $"Указанное вами время и дата не могут быть установлены, " +
-                    $"потому что сейчас уже: {DateTime.Now.ToString("HH:mm dd.MM.yyyy")}",
+                    $"РЈРєР°Р·Р°РЅРЅРѕРµ РІР°РјРё РІСЂРµРјСЏ Рё РґР°С‚Р° РЅРµ РјРѕРіСѓС‚ Р±С‹С‚СЊ СѓСЃС‚Р°РЅРѕРІР»РµРЅС‹, " +
+                    $"РїРѕС‚РѕРјСѓ С‡С‚Рѕ СЃРµР№С‡Р°СЃ СѓР¶Рµ: {DateTime.Now.ToString("HH:mm dd.MM.yyyy")}",
                     replyMarkup: GetButtons());
             }
         }
         public async void Command(long chatId, string command)
         {
             if (command.ToLower() == "/start") SendMessage(chatId, 0);
-            else if (command.ToLower() == "/create_task") SendMessage(chatId, 1);
+            else if (command.ToLower() == "/create_task") { 
+                SendMessage(chatId, 1); 
+                Events.Add(new Events(DateTime.Now,"")); 
+            }
             else if (command.ToLower() == "/list_tasks")
             {
                 Users User = Users.Find(x => x.IdUser == chatId);
@@ -113,9 +117,9 @@ namespace TaskManagerTelegramBot_True
                     {
                         await TelegramBotClient.SendMessage(
                             chatId,
-                            $"Уведомить пользователя: {Event.Time.ToString("HH:mm dd.MM.yyyy")}" +
-                            $"\nСообщение: {Event.Message}",
-                            replyMarkup: DeleteEvent(Event.Message)
+                            $"РЈРІРµРґРѕРјРёС‚СЊ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ: {Event.Time.ToString("HH:mm dd.MM.yyyy")}" +
+                            $"\nРЎРѕРѕР±С‰РµРЅРёРµ: {Event.Message}",
+                            replyMarkup: DeleteEvent(Event.Id)
                         );
                     }
                 }
@@ -123,12 +127,12 @@ namespace TaskManagerTelegramBot_True
         }
         public void GetMessages(Message message)
         {
-            Console.WriteLine("Получено сообщение: " + message.Text + " от пользователя: " + message.Chat.Username);
+            Console.WriteLine("РџРѕР»СѓС‡РµРЅРѕ СЃРѕРѕР±С‰РµРЅРёРµ: " + message.Text + " РѕС‚ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ: " + message.Chat.Username);
             long IdUser = message.Chat.Id;
             string MessageUser = message.Text;
 
             if (message.Text.Contains("/")) Command(message.Chat.Id, message.Text);
-            else if (message.Text.Equals("Удалить все задачи"))
+            else if (message.Text.Equals("РЈРґР°Р»РёС‚СЊ РІСЃРµ Р·Р°РґР°С‡Рё"))
             {
                 Users User = Users.Find(x => x.IdUser == message.Chat.Id);
                 if (User == null) SendMessage(message.Chat.Id, 3);
@@ -139,7 +143,7 @@ namespace TaskManagerTelegramBot_True
                     SendMessage(User.IdUser, 5);
                 }
             }
-            else if (message.Text.Equals("Показать все задачи"))
+            else if (message.Text.Equals("РџРѕРєР°Р·Р°С‚СЊ РІСЃРµ Р·Р°РґР°С‡Рё"))
             {
                 Users User = Users.Find(x => x.IdUser == message.Chat.Id);
                 if (User == null) SendMessage(message.Chat.Id, 3);
@@ -150,9 +154,9 @@ namespace TaskManagerTelegramBot_True
                     {
                         TelegramBotClient.SendMessage(
                             message.Chat.Id,
-                            $"Уведомить пользователя: {Event.Time.ToString("HH:mm dd.MM.yyyy")}" +
-                            $"\nСообщение: {Event.Message}",
-                            replyMarkup: DeleteEvent(Event.Message)
+                            $"РЈРІРµРґРѕРјРёС‚СЊ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ: {Event.Time.ToString("HH:mm dd.MM.yyyy")}" +
+                            $"\nРЎРѕРѕР±С‰РµРЅРёРµ: {Event.Message}",
+                            replyMarkup: DeleteEvent(Event.Id)
                         );
                     }
                 }
@@ -206,7 +210,7 @@ namespace TaskManagerTelegramBot_True
             Exception exception,
             CancellationToken token)
         {
-            Console.WriteLine("Ошибка: " + exception.Message);
+            Console.WriteLine("РћС€РёР±РєР°: " + exception.Message);
         }
         public async void Tick(object obj)
         {
@@ -220,7 +224,7 @@ namespace TaskManagerTelegramBot_True
 
                     await TelegramBotClient.SendMessage(
                         User.IdUser,
-                        "Напоминание: " + User.Events[i].Message
+                        "РќР°РїРѕРјРёРЅР°РЅРёРµ: " + User.Events[i].Message
                         );
 
                     User.Events.RemoveAt(i);
