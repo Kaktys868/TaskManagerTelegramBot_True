@@ -10,6 +10,18 @@ namespace TaskManagerTelegramBot_True
 {
     public class Worker : BackgroundService
     {
+        private Dictionary<string, DayOfWeek> dayMapping = new Dictionary<string, DayOfWeek>
+        {
+            ["понедельник"] = DayOfWeek.Monday,
+            ["вторник"] = DayOfWeek.Tuesday,
+            ["среда"] = DayOfWeek.Wednesday,
+            ["четверг"] = DayOfWeek.Thursday,
+            ["пятница"] = DayOfWeek.Friday,
+            ["суббота"] = DayOfWeek.Saturday,
+            ["воскресенье"] = DayOfWeek.Sunday,
+            ["воскресение"] = DayOfWeek.Sunday
+        };
+
         readonly string Token = "8448214301:AAF0Fcz1NiXXbnCAUrlpK3itwDoMs3gFR80";
         TelegramBotClient TelegramBotClient;
         List<Users> Users = new List<Users>();
@@ -110,17 +122,24 @@ namespace TaskManagerTelegramBot_True
                 {
                     foreach (Events Event in User.Events)
                     {
+                        string messageText = $"⏰ {Event.Time.ToString("HH:mm dd.MM.yyyy")}\n" +
+                                           $"📝 {Event.Message}";
+
+                        if (Event.IsRecurring)
+                        {
+                            messageText += $"\n🔁 Повторяется: {Event.RecurrenceTime} ({Event.RecurrenceDays.Replace(",", ", ")})";
+                        }
+
                         await TelegramBotClient.SendMessage(
                             chatId,
-                            $"Уведомить пользователя: {Event.Time.ToString("HH:mm dd.MM.yyyy")}" +
-                            $"\nСообщение: {Event.Message}",
+                            messageText,
                             replyMarkup: DeleteEvent(Event.Id)
                         );
                     }
                 }
             }
         }
-        public void GetMessages(Message message)
+        public async void GetMessages(Message message)
         {
             Console.WriteLine("Получено сообщение: " + message.Text + " от пользователя: " + message.Chat.Username);
             long IdUser = message.Chat.Id;
@@ -174,6 +193,76 @@ namespace TaskManagerTelegramBot_True
                     return;
                 }
 
+                // ========== ПРОВЕРКА НА ПОВТОРЯЮЩУЮСЯ ЗАДАЧУ ==========
+                var firstLineParts = Info[0].Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+                if (firstLineParts.Length >= 3 && firstLineParts[1].ToLower() == "каждый")
+                {
+                    // Это повторяющаяся задача в формате: "21:00 каждый среда воскресенье"
+                    try
+                    {
+                        // Парсим время
+                        if (!TimeSpan.TryParse(firstLineParts[0], out TimeSpan timeOfDay))
+                        {
+                            SendMessage(message.Chat.Id, 2);
+                            return;
+                        }
+
+                        // Собираем дни недели
+                        List<DayOfWeek> daysOfWeek = new List<DayOfWeek>();
+                        for (int i = 2; i < firstLineParts.Length; i++)
+                        {
+                            string dayName = firstLineParts[i].ToLower();
+                            if (dayMapping.ContainsKey(dayName))
+                            {
+                                daysOfWeek.Add(dayMapping[dayName]);
+                            }
+                        }
+
+                        if (daysOfWeek.Count == 0)
+                        {
+                            SendMessage(message.Chat.Id, 2);
+                            return;
+                        }
+
+                        // Находим ближайший подходящий день
+                        DateTime nextDate = FindNextOccurrence(timeOfDay, daysOfWeek);
+
+                        // Сообщение без первой строки
+                        string taskMessage = message.Text.Replace(Info[0] + "\n", "");
+
+                        // Создаем задачу
+                        User.Events.Add(new Events(
+                            nextDate,
+                            taskMessage,
+                            isRecurring: true,
+                            recurrenceDays: string.Join(",", daysOfWeek.Select(d => d.ToString())),
+                            recurrenceTime: timeOfDay.ToString(@"hh\:mm")));
+
+                        // Сохраняем в БД если нужно
+                        using (var connect = new DBConnect())
+                        {
+                            connect.BDUseres.Add(new BDUsere(message.Chat.Id, $"Повторяющаяся: {taskMessage}"));
+                            connect.SaveChanges();
+                        }
+
+                        await TelegramBotClient.SendMessage(
+                            message.Chat.Id,
+                            $"✅ Создано повторяющееся напоминание!\n" +
+                            $"Следующий раз: {nextDate:HH:mm dd.MM.yyyy}\n" +
+                            $"Повтор: каждый {string.Join(", ", daysOfWeek.Select(d => dayMapping.First(x => x.Value == d).Key))} в {timeOfDay:hh\\:mm}",
+                            replyMarkup: GetButtons()
+                        );
+                        return;
+                    }
+                    catch
+                    {
+                        SendMessage(message.Chat.Id, 2);
+                        return;
+                    }
+                }
+
+                // ========== ОБЫЧНАЯ РАЗОВАЯ ЗАДАЧА ==========
                 DateTime Time;
                 if (CheckFormatDateTime(Info[0], out Time) == false)
                 {
@@ -191,10 +280,31 @@ namespace TaskManagerTelegramBot_True
                 using (var connect = new DBConnect())
                 {
                     connect.BDUseres.Add(new BDUsere(IdUser, MessageUser));
-                    Console.WriteLine("Я был тут");
+                    Console.WriteLine("Сохранено в БД");
                     connect.SaveChanges();
                 }
             }
+        }
+        private DateTime FindNextOccurrence(TimeSpan timeOfDay, List<DayOfWeek> daysOfWeek)
+        {
+            DateTime now = DateTime.Now;
+            DateTime todayWithTime = now.Date.Add(timeOfDay);
+
+            // Проверяем сегодня
+            if (daysOfWeek.Contains(now.DayOfWeek) && now < todayWithTime)
+                return todayWithTime;
+
+            // Ищем ближайший подходящий день
+            for (int i = 1; i <= 7; i++)
+            {
+                DateTime nextDay = now.AddDays(i);
+                if (daysOfWeek.Contains(nextDay.DayOfWeek))
+                {
+                    return nextDay.Date.Add(timeOfDay);
+                }
+            }
+
+            return todayWithTime.AddDays(1); // На всякий случай
         }
         private async Task HandleUpdateAsync(ITelegramBotClient client, Update update, CancellationToken cancellationToken)
         {
@@ -219,19 +329,57 @@ namespace TaskManagerTelegramBot_True
         }
         public async void Tick(object obj)
         {
-            string TimeNow = DateTime.Now.ToString("HH:mm dd.MM.yyyy");
+            DateTime now = DateTime.Now;
+            string TimeNow = now.ToString("HH:mm dd.MM.yyyy");
 
             foreach (Users User in Users)
             {
                 for (int i = User.Events.Count - 1; i >= 0; i--)
                 {
-                    if (User.Events[i].Time.ToString("HH:mm dd.MM.yyyy") != TimeNow) continue;
+                    if (User.Events[i].Time.ToString("HH:mm dd.MM.yyyy") != TimeNow)
+                        continue;
 
+                    // Отправляем напоминание
                     await TelegramBotClient.SendMessage(
                         User.IdUser,
                         "Напоминание: " + User.Events[i].Message
-                        );
+                    );
 
+                    // ========== ОБРАБОТКА ПОВТОРЯЮЩЕЙСЯ ЗАДАЧИ ==========
+                    if (User.Events[i].IsRecurring &&
+                        !string.IsNullOrEmpty(User.Events[i].RecurrenceDays) &&
+                        !string.IsNullOrEmpty(User.Events[i].RecurrenceTime))
+                    {
+                        try
+                        {
+                            // Парсим дни и время
+                            var days = User.Events[i].RecurrenceDays
+                                .Split(",")
+                                .Select(d => (DayOfWeek)Enum.Parse(typeof(DayOfWeek), d))
+                                .ToList();
+
+                            TimeSpan timeOfDay = TimeSpan.Parse(User.Events[i].RecurrenceTime);
+
+                            // Находим следующую дату
+                            DateTime nextDate = FindNextOccurrence(timeOfDay, days);
+
+                            // Создаем новую задачу
+                            User.Events.Add(new Events(
+                                nextDate,
+                                User.Events[i].Message,
+                                isRecurring: true,
+                                recurrenceDays: User.Events[i].RecurrenceDays,
+                                recurrenceTime: User.Events[i].RecurrenceTime));
+
+                            Console.WriteLine($"Создано следующее повторение: {nextDate:HH:mm dd.MM.yyyy}");
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"Ошибка обработки повторяющейся задачи: {ex.Message}");
+                        }
+                    }
+
+                    // Удаляем текущую задачу
                     User.Events.RemoveAt(i);
                 }
             }
