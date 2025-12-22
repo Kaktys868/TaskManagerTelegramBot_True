@@ -1,5 +1,6 @@
 ﻿using System.Reflection.Metadata.Ecma335;
 using TaskManagerTelegramBot_True.Classes;
+using TaskManagerTelegramBot_True.Classes.Common;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
@@ -76,12 +77,6 @@ namespace TaskManagerTelegramBot_True
         }
         public async void SendMessage(long chatId, int typeMessage)
         {
-            if (typeMessage < 0 || typeMessage >= Messages.Count)
-            {
-                Console.WriteLine($"Ошибка: недопустимый индекс сообщения {typeMessage}. Допустимый диапазон: 0-{Messages.Count - 1}");
-                return;
-            }
-
             if (typeMessage != 3)
             {
                 await TelegramBotClient.SendMessage(
@@ -89,6 +84,7 @@ namespace TaskManagerTelegramBot_True
                     Messages[typeMessage],
                     parseMode: ParseMode.Html,
                     replyMarkup: GetButtons());
+
             }
             else if (typeMessage == 3)
             {
@@ -103,8 +99,7 @@ namespace TaskManagerTelegramBot_True
         {
             if (command.ToLower() == "/start") SendMessage(chatId, 0);
             else if (command.ToLower() == "/create_task") { 
-                SendMessage(chatId, 1); 
-                Events.Add(new Events(DateTime.Now,"")); 
+                SendMessage(chatId, 1);
             }
             else if (command.ToLower() == "/list_tasks")
             {
@@ -130,6 +125,8 @@ namespace TaskManagerTelegramBot_True
             Console.WriteLine("Получено сообщение: " + message.Text + " от пользователя: " + message.Chat.Username);
             long IdUser = message.Chat.Id;
             string MessageUser = message.Text;
+
+
 
             if (message.Text.Contains("/")) Command(message.Chat.Id, message.Text);
             else if (message.Text.Equals("Удалить все задачи"))
@@ -189,6 +186,14 @@ namespace TaskManagerTelegramBot_True
                 User.Events.Add(new Events(
                     Time,
                     message.Text.Replace(Time.ToString("HH:mm dd.MM.yyyy") + "\n", "")));
+
+
+                using (var connect = new DBConnect())
+                {
+                    connect.BDUseres.Add(new BDUsere(IdUser, MessageUser));
+                    Console.WriteLine("Я был тут");
+                    connect.SaveChanges();
+                }
             }
         }
         private async Task HandleUpdateAsync(ITelegramBotClient client, Update update, CancellationToken cancellationToken)

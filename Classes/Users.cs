@@ -9,7 +9,8 @@ namespace TaskManagerTelegramBot_True.Classes
 {
     public class Users
     {
-        public long IdUser { get; set; }
+        public int Id { get; set; }
+        public long IdUser   { get; set; }
         public List<Events> Events { get; set; }
         public Users(long idUser)
         {

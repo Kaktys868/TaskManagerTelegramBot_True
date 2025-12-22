@@ -6,16 +6,16 @@ using System.Threading.Tasks;
 
 namespace TaskManagerTelegramBot_True.Classes
 {
-    public class Events
+    public class BDUsere
     {
         public int Id { get; set; }
-        public DateTime Time { get; set; }
+        public long IdUser { get; set; }
         public string Message { get; set; }
-        public DateTime RecurrenceDays { get; set; }
-        public Events(DateTime time, string message)
+        public BDUsere() { }
+        public BDUsere(long idUser, string Message)
         {
-            Time = time;
-            Message = message;
+            IdUser = idUser;
+            this.Message = Message;
         }
     }
 }
